@@ -1,6 +1,10 @@
-// TODO: Replace this URL with your actual Cloudflare Worker URL
-// Example: "https://attendance-app.yourname.workers.dev"
-const API_BASE_URL = "https://attendance-app.YOUR_USERNAME.workers.dev";
+// Cloudflare Worker URL (Replace YOUR_USERNAME with your actual Cloudflare subdomain)
+let API_BASE_URL = "https://attendance-app.YOUR_USERNAME.workers.dev";
+
+// Automatically use local server when running locally (npm start)
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  API_BASE_URL = "";
+}
 
 const state = {
   sheets: {},
@@ -767,8 +771,13 @@ function loadSheetsFromExcel(file) {
         throw new Error(`Server returned ${r.status}: ${text}`);
       }
       const text = await r.text();
-      if (!text) throw new Error("Server returned empty response (Check API URL)");
-      return JSON.parse(text);
+      const trimmed = text ? text.trim() : "";
+      if (!trimmed) throw new Error("Server returned empty response. Check API_BASE_URL in app.js");
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: "${trimmed.substring(0, 50)}..."`);
+      }
     })
     .then((data) => {
       if (data.error) throw new Error(data.error);

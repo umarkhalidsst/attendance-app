@@ -1,15 +1,17 @@
 # Attendance + WhatsApp Alerts
 
-A simple web app that lets you:
+A web app that lets you:
 
 - Load student data from an Excel file (classes = worksheets)
 - Mark absent students (default is present)
 - Send a ready-made WhatsApp message to parents when a student is absent
-- Let a principal message any class/student and a teacher message only the assigned class
+- Manage Principal and Teacher roles with different permissions.
 
 ## Getting started
 
 ### 1) Install dependencies
+
+For local testing, you will need a local server. A sample server file was previously at `public/server.js`.
 
 ```bash
 npm install

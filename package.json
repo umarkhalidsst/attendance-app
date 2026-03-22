@@ -1,20 +1,20 @@
 {
   "name": "attendance-whatsapp",
   "version": "1.0.0",
-  "description": "Simple attendance app with WhatsApp notifications and Google Sheets/Excel input.",
+  "description": "Attendance management with WhatsApp alerts",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^4.22.1",
-    "hono": "^4.12.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
     "xlsx": "^0.18.5"
   },
-  "engines": {
-    "node": ">=16"
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }

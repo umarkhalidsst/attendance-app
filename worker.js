@@ -1,14 +1,16 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import * as XLSX from 'xlsx';
+import { serveStatic } from 'hono/cloudflare-workers'
 
 const app = new Hono();
 
+let principalsData = [];
+let teachersData = [];
+let sheetsData = {};
+
 // Enable CORS for all routes
 app.use('/*', cors());
-
-// 0. Root Route (To confirm Worker is running)
-app.get('/', (c) => c.text("Attendance API is running! Go to your frontend website to use the app."));
 
 // Helper: Convert Workbook to JSON
 function workbookToJson(workbook) {
@@ -19,6 +21,62 @@ function workbookToJson(workbook) {
   });
   return out;
 }
+
+// 0. Principals Data Routes
+app.get('/api/principals', (c) => {
+  return c.json({ principals: principalsData });
+});
+
+app.post('/api/principals', async (c) => {
+  try {
+    const body = await c.req.json();
+    if (body.principals) {
+      principalsData = body.principals;
+      return c.json({ success: true });
+    }
+    return c.json({ error: "Missing data" }, 400);
+  } catch (e) {
+    return c.json({ error: e.message }, 400);
+  }
+});
+
+// Teachers Data Routes
+app.get('/api/teachers', (c) => {
+  return c.json({ teachers: teachersData });
+});
+
+app.post('/api/teachers', async (c) => {
+  try {
+    const body = await c.req.json();
+    if (body.teachers) {
+      teachersData = body.teachers;
+      return c.json({ success: true });
+    }
+    return c.json({ error: "Missing data" }, 400);
+  } catch (e) {
+    return c.json({ error: e.message }, 400);
+  }
+});
+
+// Sheets Data Routes
+app.get('/api/sheets', (c) => {
+  const principalId = c.req.query('principalId');
+  if (!principalId) return c.json({ sheets: {} });
+  return c.json({ sheets: sheetsData[principalId] || {} });
+});
+
+app.post('/api/sheets', async (c) => {
+  try {
+    const body = await c.req.json();
+    if (body.sheets && body.principalId) {
+      sheetsData[body.principalId] = body.sheets;
+      return c.json({ success: true });
+    }
+    return c.json({ error: "Missing data" }, 400);
+  } catch (e) {
+    return c.json({ error: e.message }, 400);
+  }
+});
 
 // 1. Upload Route (Replaces multer logic)
 app.post('/api/upload', async (c) => {
@@ -100,5 +158,8 @@ app.get('/api/google-sheet-worksheets', async (c) => {
     return c.json({ error: err.message }, 500);
   }
 });
+
+// Serve static assets from the root directory
+app.get('/*', serveStatic({ root: './public' }))
 
 export default app;

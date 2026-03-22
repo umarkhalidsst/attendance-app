@@ -1,188 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Attendance + WhatsApp Alerts</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header>
-      <h1>Attendance Manager</h1>
-      <p class="subtitle">
-        Load from Excel or Google Sheet, mark absentees, and send WhatsApp alerts.
-      </p>
-    </header>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+        .row { margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .auth-tab.active { border-color: #3b82f6; color: #1d4ed8; background-color: #eff6ff; }
 
-    <main>
-      <section id="auth-section" class="card">
-        <h2>Sign in</h2>
-        <p class="hint" style="margin: 8px 0 12px; opacity: 0.8;">
-          Choose how you want to sign in. As admin you can approve principals, or principals can request access.
-        </p>
+        /* Animations & Transitions */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .auth-panel { animation: fadeIn 0.4s ease-out forwards; }
 
-        <div class="auth-tabs" role="tablist">
-          <button class="auth-tab active" data-tab="admin" role="tab" aria-selected="true">Admin</button>
-          <button class="auth-tab" data-tab="principal" role="tab" aria-selected="false">Principal</button>
+        /* Custom focus rings for better accessibility */
+        input:focus, select:focus, button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+            border-color: #6366f1;
+        }
+
+        /* Status/Toast notification styling */
+        #status {
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center min-h-screen p-4 font-sans text-gray-800">
+    <div class="max-w-6xl w-full mx-auto bg-white/95 backdrop-blur shadow-2xl rounded-2xl p-8 transition-all border border-white/20">
+        <header class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-pink-600">Attendance App</h1>
+            <div id="user-info" class="text-sm">
+                <span id="signed-in-user" class="font-semibold"></span>
+                <span id="signed-in-role" class="text-gray-600"></span>
+                <button id="logout" class="ml-2 text-red-600 hover:underline hidden">Logout</button>
+            </div>
+        </header>
+        
+        <div id="status" class="hidden px-6 py-3 rounded-lg shadow-lg font-medium"></div>
+
+        <!-- Auth Section -->
+        <div id="auth-section">
+            <div class="flex border-b border-gray-200 mb-8 gap-1">
+                <button class="auth-tab px-6 py-3 -mb-px border-b-2 border-transparent hover:bg-gray-50 rounded-t-lg font-medium text-gray-600 transition-colors" data-tab="principal">Principal</button>
+                <button class="auth-tab px-6 py-3 -mb-px border-b-2 border-transparent hover:bg-gray-50 rounded-t-lg font-medium text-gray-600 transition-colors" data-tab="teacher">Teacher</button>
+                <button class="auth-tab px-4 py-2 -mb-px border-b-2 border-transparent rounded-t-lg hover:border-gray-300 font-medium text-gray-500 hover:text-gray-700 ml-auto" data-tab="admin">Admin</button>
+            </div>
+
+            <!-- Admin Login -->
+            <div class="auth-panel hidden transition-opacity duration-300" data-panel="admin">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Admin Login</h2>
+                <input type="password" id="admin-password" placeholder="Admin Password" class="border p-2 rounded-md w-full mb-4 transition">
+                <button id="admin-login" class="w-full bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition">Login as Admin</button>
+            </div>
+
+            <!-- Principal Login/Signup -->
+            <div class="auth-panel hidden transition-opacity duration-300" data-panel="principal">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">Principal Login</h2>
+                        <select id="principal-login-select" class="border p-2 rounded-md w-full mb-2 transition"></select>
+                        <input type="password" id="principal-login-password" placeholder="Password" class="border p-2 rounded-md w-full mb-4 transition">
+                        <button id="principal-login" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">Login</button>
+                    </div>
+                    <div class="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-8 border-gray-200">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">Request Access (Sign Up)</h2>
+                        <div class="space-y-3">
+                            <input type="text" id="principal-signup-school" placeholder="School Name" class="border p-2 rounded-md w-full transition">
+                            <input type="text" id="principal-signup-name" placeholder="Principal Name" class="border p-2 rounded-md w-full transition">
+                            <input type="text" id="principal-signup-phone" placeholder="Phone" class="border p-2 rounded-md w-full transition">
+                            <input type="email" id="principal-signup-email" placeholder="Email" class="border p-2 rounded-md w-full transition">
+                            <input type="password" id="principal-signup-password" placeholder="Password" class="border p-2 rounded-md w-full transition">
+                        </div>
+                        <button id="principal-signup" class="w-full mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Submit Request</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teacher Login -->
+            <div class="auth-panel hidden transition-opacity duration-300" data-panel="teacher">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Teacher Login</h2>
+                <input type="tel" id="teacher-login-phone" placeholder="Phone Number" class="border-2 border-gray-100 p-3 rounded-xl w-full mb-3 focus:border-purple-500 transition bg-gray-50">
+                <input type="password" id="teacher-login-password" placeholder="Password" class="border-2 border-gray-100 p-3 rounded-xl w-full mb-6 focus:border-purple-500 transition bg-gray-50">
+                <button id="teacher-login" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold px-4 py-3 rounded-xl hover:shadow-lg hover:scale-[1.01] transition-all transform">Login as Teacher</button>
+            </div>
         </div>
 
-        <div class="auth-panels">
-          <div class="auth-panel" data-panel="admin" role="tabpanel">
-            <h3>Admin login</h3>
-            <label for="admin-password">Password</label>
-            <input id="admin-password" type="password" placeholder="Admin password" />
-            <button id="admin-login" class="primary">Login as Admin</button>
-          </div>
-
-          <div class="auth-panel hidden" data-panel="principal" role="tabpanel">
-            <div class="row" style="margin-bottom: 16px;">
-              <div>
-                <h3>Principal login</h3>
-                <label for="principal-login-select">Select principal</label>
-                <select id="principal-login-select"></select>
-                <label for="principal-login-password">Password</label>
-                <input id="principal-login-password" type="password" placeholder="Password" />
-                <button id="principal-login" class="primary">Login as Principal</button>
-              </div>
+        <!-- App Section -->
+        <div id="app" class="hidden space-y-6">
+            
+            <!-- Admin Panel -->
+            <div id="admin-panel" class="hidden border p-4 rounded bg-gray-50">
+                <h2 class="text-xl font-bold mb-4">Admin Panel: Pending Requests</h2>
+                <div id="pending-principals" class="space-y-2"></div>
             </div>
 
-            <div class="row" style="margin-top: 12px;">
-              <div>
-                <h3>Request access</h3>
-                <label for="principal-signup-name">Name</label>
-                <input id="principal-signup-name" placeholder="Your name" />
-                <label for="principal-signup-phone">Phone</label>
-                <input id="principal-signup-phone" placeholder="e.g. 03001234567" />
-                <label for="principal-signup-email">Email</label>
-                <input id="principal-signup-email" placeholder="you@example.com" />
-                <label for="principal-signup-password">Password</label>
-                <input id="principal-signup-password" type="password" placeholder="Choose a password" />
-                <label for="principal-signup-school">School name</label>
-                <input id="principal-signup-school" placeholder="School name" />
-                <button id="principal-signup" class="primary">Request access</button>
-                <p class="hint" style="font-size:0.85rem; margin:6px 0 0; opacity:0.8;">
-                  After approval you can upload the school sheet and manage teachers.
-                </p>
-              </div>
+            <!-- Principal Dashboard -->
+            <div id="principal-dashboard" class="hidden">
+                 <!-- Teacher Management -->
+                <div id="teacher-management" class="border p-4 rounded bg-gray-50 mb-6">
+                    <h3 class="text-lg font-bold mb-4">Manage Teachers</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                        <input type="text" id="teacher-name" placeholder="Name" class="border border-gray-300 p-2 rounded-lg transition focus:ring-2 focus:ring-blue-200">
+                        <input type="text" id="teacher-phone" placeholder="Phone" class="border border-gray-300 p-2 rounded-lg transition focus:ring-2 focus:ring-blue-200">
+                        <input type="password" id="teacher-password" placeholder="Password" class="border border-gray-300 p-2 rounded-lg transition focus:ring-2 focus:ring-blue-200">
+                        <input type="text" id="teacher-classes" placeholder="Classes (comma separated)" class="border border-gray-300 p-2 rounded-lg transition focus:ring-2 focus:ring-blue-200">
+                        <button id="add-teacher" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                            <span>Add/Update</span>
+                        </button>
+                    </div>
+                    <div id="teacher-list"></div>
+                </div>
             </div>
-          </div>
+
+            <!-- Main Workspace -->
+            <div class="bg-white rounded">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Excel File</label>
+                        <input type="file" id="excel-file" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Or Google Sheet Link</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="google-sheet-url" placeholder="Paste link here..." class="border p-2 rounded-md w-full transition">
+                            <button id="load-google-sheet" class="bg-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 transition">Load</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-4 bg-gray-50 p-3 rounded">
+                    <div id="teacher-select-row" class="hidden w-full md:w-auto">
+                        <select id="teacher-select" class="border p-2 rounded-md w-full md:w-64 transition"></select>
+                    </div>
+                    <div class="w-full md:w-auto">
+                        <select id="sheet-select" class="border p-2 rounded-md w-full md:w-64 transition"></select>
+                    </div>
+                </div>
+
+                <div class="overflow-hidden border border-gray-200 rounded-xl mb-6 shadow-sm">
+                    <table id="students-table" class="min-w-full">
+                        <thead class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                            <tr>
+                                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Roll</th>
+                                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Father</th>
+                                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Phone</th>
+                                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-sm"></tbody>
+                    </table>
+                </div>
+
+                <!-- Message Section -->
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-bold mb-2">WhatsApp Alerts</h3>
+                    <div class="mb-2 flex justify-between items-center">
+                         <label class="text-sm text-gray-600">Message Template:</label>
+                         <button id="copy-template" class="text-xs text-blue-600 hover:underline">Copy Template</button>
+                    </div>
+                    <textarea id="message-template" rows="4" class="w-full border p-2 rounded-md mb-2 text-sm font-mono bg-gray-50 transition"></textarea>
+                    <button id="send-class-message" class="bg-green-600 text-white px-6 py-2 rounded-md font-medium hover:bg-green-700 transition">Generate WhatsApp Links for Absent Students</button>
+                    
+                    <div id="message-area" class="hidden mt-4 p-4 bg-green-50 rounded border border-green-200">
+                        <h4 class="font-bold text-green-800 mb-2">Ready to Send:</h4>
+                        <div id="links" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </section>
-
-      <section id="app" class="hidden">
-        <div class="row" style="justify-content: space-between; align-items: center;">
-          <div>
-            <strong>Signed in as:</strong> <span id="signed-in-user"></span>
-            <span id="signed-in-role"></span>
-          </div>
-          <button id="logout" class="primary">Log out</button>
-        </div>
-
-        <section id="admin-panel" class="card hidden">
-          <h2>Admin: Approve principals</h2>
-          <p class="hint" style="font-size:0.9rem; margin:6px 0 0; opacity:0.8;">
-            Principals must be approved before they can access the app.
-          </p>
-          <div id="pending-principals"></div>
-        </section>
-
-        <section class="card" id="principal-dashboard">
-          <h2>1. Load students (Excel or Google Sheet)</h2>
-          <div class="row">
-            <div class="column">
-              <label for="excel-file">Upload Excel file</label>
-              <input id="excel-file" type="file" accept=".xlsx,.xls" />
-              <p class="hint" style="font-size:0.9rem; margin:6px 0 0; opacity:0.8;">
-                Each sheet should be a class (e.g., 9, 10). Upload the workbook to load students.
-              </p>
-            </div>
-            <div class="column">
-              <label for="google-sheet-url">Google Sheet link</label>
-              <input id="google-sheet-url" placeholder="Paste sheet link (anyone with link can view)" />
-              <button id="load-google-sheet" class="primary">Load Google Sheet</button>
-              <p class="hint" style="font-size:0.9rem; margin:6px 0 0; opacity:0.8;">
-                Paste a public Google Sheet link and load its sheets as classes.
-              </p>
-            </div>
-          </div>
-          <div class="row">
-            <label for="sheet-select">Choose class (sheet)</label>
-            <select id="sheet-select"></select>
-          </div>
-        </section>
-
-        <section class="card">
-          <h2>2. Manage teachers</h2>
-          <div class="row" id="teacher-select-row">
-            <label for="teacher-select">Select teacher</label>
-            <select id="teacher-select"></select>
-          </div>
-
-          <div class="row" id="teacher-management">
-            <h3>Add / manage teachers</h3>
-            <label for="teacher-name">Teacher name</label>
-            <input id="teacher-name" placeholder="Teacher name" />
-            <label for="teacher-phone">Teacher phone</label>
-            <input id="teacher-phone" placeholder="e.g. 03001234567" />
-            <label for="teacher-classes">Assigned class(es)</label>
-            <input id="teacher-classes" placeholder="e.g. 9, 10" />
-            <div class="row" style="margin-top: 8px;">
-              <button id="add-teacher" class="primary">Add / Update Teacher</button>
-            </div>
-            <div id="teacher-list" style="margin-top: 16px;"></div>
-            <p class="hint" style="font-size:0.85rem; margin:6px 0 0; opacity:0.8;">
-              As Principal you can add teachers and assign classes. Teachers will only see classes assigned to them.
-            </p>
-          </div>
-        </section>
-
-        <section class="card">
-          <h2>3. Attendance & WhatsApp</h2>
-          <p class="hint">
-            Default is <strong>present</strong>. Mark absent to see the WhatsApp button.
-          </p>
-          <div class="table-wrapper">
-            <table id="students-table">
-              <thead>
-                <tr>
-                  <th>Roll #</th>
-                  <th>Name</th>
-                  <th>Father's Name</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div class="row">
-            <button id="send-class-message" class="primary">
-              Send message to selected student(s)
-            </button>
-          </div>
-          <div id="message-area" class="card hidden">
-            <h3>Message preview</h3>
-            <p>
-              <strong>Template</strong>
-            </p>
-            <textarea id="message-template" rows="3"></textarea>
-            <p>
-              <button id="copy-template">Copy template</button>
-            </p>
-            <div id="links"></div>
-          </div>
-        </section>
-      </section>
-    </main>
-
-    <footer>
-      <p>
-        Built for quick attendance + WhatsApp alerts. Phone formats accepted:
-        +923001234567, 03001234567, 3001234567.
-      </p>
-    </footer>
-
+    </div>
     <script src="app.js"></script>
-  </body>
+</body>
 </html>

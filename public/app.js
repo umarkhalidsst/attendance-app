@@ -801,26 +801,31 @@ function buildStudentsTable() {
 
     const rollTd = document.createElement("td");
     rollTd.className = "text-center py-3";
+    rollTd.className = "text-center py-3 border-b border-gray-100";
     rollTd.textContent = roll;
     tr.appendChild(rollTd);
 
     const nameTd = document.createElement("td");
     nameTd.className = "text-center py-3";
+    nameTd.className = "text-center py-3 border-b border-gray-100";
     nameTd.textContent = name;
     tr.appendChild(nameTd);
 
     const fatherTd = document.createElement("td");
     fatherTd.className = "text-center py-3";
+    fatherTd.className = "text-center py-3 border-b border-gray-100";
     fatherTd.textContent = father;
     tr.appendChild(fatherTd);
 
     const phoneTd = document.createElement("td");
     phoneTd.className = "text-center py-3";
+    phoneTd.className = "text-center py-3 border-b border-gray-100";
     phoneTd.textContent = phone || "(invalid)";
     tr.appendChild(phoneTd);
 
     const statusTd = document.createElement("td");
     statusTd.className = "text-center py-3";
+    statusTd.className = "text-center py-3 border-b border-gray-100";
     const statusSelect = document.createElement("select");
     statusSelect.dataset.studentIndex = index;
 
@@ -842,6 +847,7 @@ function buildStudentsTable() {
 
     const actionTd = document.createElement("td");
     actionTd.className = "text-center py-3";
+    actionTd.className = "text-center py-3 border-b border-gray-100";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "small";

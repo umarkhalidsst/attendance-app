@@ -1,6 +1,6 @@
 // Cloudflare Worker URL (The backend API)
 let API_BASE_URL = "";
-console.log("App Version: 1.6 - Logout Fix");
+console.log("App Version: 1.7 - Fix Teacher Login");
 
 const state = {
   sheets: {},
@@ -38,10 +38,15 @@ const elements = {
   googleSheetUrl: document.getElementById("google-sheet-url"),
   loadGoogleSheet: document.getElementById("load-google-sheet"),
 
+  teacherLoginPhone: document.getElementById("teacher-login-phone"),
+  teacherLoginPassword: document.getElementById("teacher-login-password"),
+  teacherLogin: document.getElementById("teacher-login"),
+
   teacherSelectRow: document.getElementById("teacher-select-row"),
   teacherSelect: document.getElementById("teacher-select"),
   teacherManagement: document.getElementById("teacher-management"),
   teacherClasses: document.getElementById("teacher-classes"),
+  teacherPassword: document.getElementById("teacher-password"),
   studentsTable: document.getElementById("students-table"),
   sendClassMessage: document.getElementById("send-class-message"),
   messageArea: document.getElementById("message-area"),
@@ -199,6 +204,41 @@ function loadTeachers() {
 
 function saveTeachers() {
   localStorage.setItem("attendance_teachers", JSON.stringify(state.teachers));
+  saveTeachersToAPI();
+}
+
+async function loadTeachersFromAPI() {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api/teachers`);
+    const data = await resp.json();
+
+    if (data.error) {
+      console.error("Error loading teachers:", data.error);
+      return;
+    }
+
+    // Merge or replace local teachers
+    state.teachers = data.teachers || [];
+    render();
+  } catch (err) {
+    console.error("Failed to load teachers from API:", err);
+  }
+}
+
+async function saveTeachersToAPI() {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api/teachers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teachers: state.teachers }),
+    });
+
+    if (!resp.ok) {
+      console.error("Failed to save teachers:", resp.status);
+    }
+  } catch (err) {
+    console.error("Failed to save teachers to API:", err);
+  }
 }
 
 function loadPrincipals() {
@@ -264,6 +304,44 @@ function saveSheets() {
     localStorage.setItem("attendance_sheets", JSON.stringify(state.sheets));
   } catch (e) {
     console.warn("Could not save sheets to local storage (likely quota exceeded)");
+  }
+  saveSheetsToAPI();
+}
+
+async function loadSheetsFromAPI() {
+  try {
+    let principalId = null;
+    if (state.currentUser?.role === 'principal') {
+      principalId = state.currentUser.id;
+    } else if (state.currentUser?.role === 'teacher') {
+      principalId = state.activeTeacher?.principalId;
+    }
+
+    if (!principalId) return; // Can't load sheets if we don't know the principal
+    const resp = await fetch(`${API_BASE_URL}/api/sheets?principalId=${encodeURIComponent(principalId)}`);
+    const data = await resp.json();
+
+    state.sheets = data.sheets || {};
+    // Update selection options based on new data
+    updateSheetSelectOptions();
+    render();
+    
+  } catch (err) {
+    console.error("Failed to load sheets from API:", err);
+  }
+}
+
+async function saveSheetsToAPI() {
+  try {
+    if (state.currentUser?.role !== 'principal') return;
+
+    const resp = await fetch(`${API_BASE_URL}/api/sheets`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheets: state.sheets, principalId: state.currentUser.id }),
+    });
+  } catch (err) {
+    console.error("Failed to save sheets to API:", err);
   }
 }
 
@@ -424,6 +502,7 @@ function handlePrincipalLogin() {
 
   state.currentUser = { role: "principal", id: principal.id, name: principal.name, school: principal.school };
   saveSession();
+  loadSheetsFromAPI();
   render();
 }
 
@@ -458,6 +537,31 @@ function handlePrincipalSignup() {
 
   alert("Request submitted. Please wait for admin approval.");
   renderPrincipalLoginOptions();
+}
+
+function handleTeacherLogin() {
+  const phone = elements.teacherLoginPhone.value.trim();
+  const password = elements.teacherLoginPassword.value.trim();
+  const normalizedPhone = normalizePhone(phone);
+
+  if (!normalizedPhone) {
+    setStatus("Please enter a valid phone number.", 'error');
+    return;
+  }
+
+  // Find teacher in the loaded list
+  const teacher = state.teachers.find(t => normalizePhone(t.phone) === normalizedPhone && t.password === password);
+
+  if (!teacher) {
+    setStatus("Invalid phone number or password.", 'error');
+    return;
+  }
+
+  state.currentUser = { role: "teacher", name: teacher.name, classes: teacher.classes };
+  state.activeTeacher = teacher;
+  saveSession();
+  loadSheetsFromAPI(); // Load sheets for this teacher's principal
+  render();
 }
 
 function renderTeacherList() {
@@ -510,6 +614,7 @@ function renderTeacherList() {
       document.getElementById("teacher-name").value = t.name;
       document.getElementById("teacher-phone").value = t.phone;
       document.getElementById("teacher-classes").value = t.classes;
+      document.getElementById("teacher-password").value = t.password || "";
     });
 
     const deleteBtn = document.createElement("button");
@@ -957,6 +1062,16 @@ function init() {
     });
   });
 
+  elements.teacherLogin.addEventListener("click", () => {
+    handleTeacherLogin();
+  });
+  elements.teacherLoginPassword.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleTeacherLogin();
+    }
+  });
+
   elements.sheetSelect.addEventListener("change", (event) => {
     state.activeSheet = event.target.value;
     buildStudentsTable();
@@ -984,18 +1099,21 @@ function init() {
     const name = document.getElementById("teacher-name").value.trim();
     const phone = document.getElementById("teacher-phone").value.trim();
     const classes = document.getElementById("teacher-classes").value.trim();
+    const password = document.getElementById("teacher-password").value.trim();
 
-    if (!name || !phone || !classes) {
-      alert("Please provide teacher name, phone, and class list.");
+    if (!name || !phone || !classes || !password) {
+      setStatus("Please provide teacher name, phone, password, and class list.", 'error');
       return;
     }
 
     const existing = state.teachers.find((t) => t.name === name);
     if (existing) {
       existing.phone = phone;
+      existing.password = password;
       existing.classes = classes;
+      // preserve existing principalId
     } else {
-      state.teachers.push({ name, phone, classes });
+      state.teachers.push({ name, phone, classes, password, principalId: state.currentUser.id });
     }
 
     saveTeachers();
@@ -1003,6 +1121,7 @@ function init() {
 
     document.getElementById("teacher-name").value = "";
     document.getElementById("teacher-phone").value = "";
+    document.getElementById("teacher-password").value = "";
     document.getElementById("teacher-classes").value = "";
   });
 
@@ -1046,6 +1165,7 @@ function init() {
   // Sync with the server
   loadPrincipalsFromAPI();
   loadTeachersFromAPI();
+  loadSheetsFromAPI();
   loadSheetsFromAPI();
   render();
 }

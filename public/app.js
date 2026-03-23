@@ -1,5 +1,6 @@
 // Cloudflare Worker URL (The backend API)
 let API_BASE_URL = "";
+console.log("App Version: 1.5 - Force Update");
 
 const state = {
   sheets: {},

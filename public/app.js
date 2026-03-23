@@ -1,6 +1,6 @@
 // Cloudflare Worker URL (The backend API)
 let API_BASE_URL = "";
-console.log("App Version: 2.0 - Auto Approval & PWA");
+console.log("App Version: 2.1 - Manual Approval & PWA");
 
 const state = {
   sheets: {},
@@ -537,7 +537,7 @@ function handlePrincipalSignup() {
   }
  elements.principalSignupSchool.value = "";
   const id = `p_${Date.now()}`;
-  state.principals.push({ id, name, phone, email, password, school, approved: true, approvedAt: Date.now(), expiresDays: 365 });
+  state.principals.push({ id, name, phone, email, password, school, approved: false, approvedAt: null, expiresDays: 0 });
   savePrincipals();
   savePrincipalsToAPI();
   elements.principalSignupName.value = "";
@@ -546,7 +546,7 @@ function handlePrincipalSignup() {
   elements.principalSignupPassword.value = "";
   elements.principalSignupSchool.value = "";
 
-  alert("Principal registered successfully. You can now login.");
+  alert("Request submitted. Please wait for admin approval.");
   renderPrincipalLoginOptions();
 }
 

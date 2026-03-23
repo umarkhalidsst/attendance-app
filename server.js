@@ -64,10 +64,17 @@ function workbookToJson(workbook) {
 }
 
 // --- Upload Route ---
-app.post('/api/upload', (req, res) => {
-    // Multer removed to fix Cloudflare build vulnerability warnings.
-    // File upload works in the deployed version (worker.js).
-    res.status(400).json({ error: "Local upload disabled. Please test on Cloudflare." });
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "Missing file" });
+        
+        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const sheets = workbookToJson(workbook);
+        
+        res.json({ sheets });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 3000;

@@ -1,6 +1,6 @@
 // Cloudflare Worker URL (The backend API)
 let API_BASE_URL = "";
-console.log("App Version: 2.4 - Mobile Card View");
+console.log("App Version: 2.5 - Mobile Icon & Login Fix");
 
 const state = {
   sheets: {},
@@ -381,8 +381,14 @@ function clearSession() {
 }
 
 function isPrincipalExpired(p) {
-  if (!p.approved || !p.approvedAt || !p.expiresDays) return false;
-  const expiresAt = p.approvedAt + p.expiresDays * 24 * 60 * 60 * 1000;
+  if (!p.approved) return false; 
+  // If data is missing, assume not expired to prevent lockout loops
+  if (!p.approvedAt || !p.expiresDays) return false;
+
+  const approvedAt = Number(p.approvedAt);
+  const days = Number(p.expiresDays);
+  
+  const expiresAt = approvedAt + days * 24 * 60 * 60 * 1000;
   return Date.now() > expiresAt;
 }
 

@@ -1,12 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import * as XLSX from 'xlsx';
+import { serveStatic } from 'hono/cloudflare-workers';
+import manifest from '__STATIC_CONTENT_MANIFEST';
 
 const app = new Hono();
-
-let principalsData = [];
-let teachersData = [];
-let sheetsData = {};
 
 // Enable CORS for all routes
 app.use('/*', cors());
@@ -21,19 +19,17 @@ function workbookToJson(workbook) {
   return out;
 }
 
-// Root Route: Confirm API is working
-app.get('/', (c) => c.text("Attendance API is running. Please access the app via your Cloudflare Pages URL."));
-
 // 0. Principals Data Routes
-app.get('/api/principals', (c) => {
-  return c.json({ principals: principalsData });
+app.get('/api/principals', async (c) => {
+  const principals = await c.env.ATTENDANCE_KV.get('principals', { type: 'json' });
+  return c.json({ principals: principals || [] });
 });
 
 app.post('/api/principals', async (c) => {
   try {
     const body = await c.req.json();
     if (body.principals) {
-      principalsData = body.principals;
+      await c.env.ATTENDANCE_KV.put('principals', JSON.stringify(body.principals));
       return c.json({ success: true });
     }
     return c.json({ error: "Missing data" }, 400);
@@ -43,15 +39,16 @@ app.post('/api/principals', async (c) => {
 });
 
 // Teachers Data Routes
-app.get('/api/teachers', (c) => {
-  return c.json({ teachers: teachersData });
+app.get('/api/teachers', async (c) => {
+  const teachers = await c.env.ATTENDANCE_KV.get('teachers', { type: 'json' });
+  return c.json({ teachers: teachers || [] });
 });
 
 app.post('/api/teachers', async (c) => {
   try {
     const body = await c.req.json();
     if (body.teachers) {
-      teachersData = body.teachers;
+      await c.env.ATTENDANCE_KV.put('teachers', JSON.stringify(body.teachers));
       return c.json({ success: true });
     }
     return c.json({ error: "Missing data" }, 400);
@@ -61,17 +58,18 @@ app.post('/api/teachers', async (c) => {
 });
 
 // Sheets Data Routes
-app.get('/api/sheets', (c) => {
+app.get('/api/sheets', async (c) => {
   const principalId = c.req.query('principalId');
   if (!principalId) return c.json({ sheets: {} });
-  return c.json({ sheets: sheetsData[principalId] || {} });
+  const sheets = await c.env.ATTENDANCE_KV.get(`sheets_${principalId}`, { type: 'json' });
+  return c.json({ sheets: sheets || {} });
 });
 
 app.post('/api/sheets', async (c) => {
   try {
     const body = await c.req.json();
     if (body.sheets && body.principalId) {
-      sheetsData[body.principalId] = body.sheets;
+      await c.env.ATTENDANCE_KV.put(`sheets_${body.principalId}`, JSON.stringify(body.sheets));
       return c.json({ success: true });
     }
     return c.json({ error: "Missing data" }, 400);
@@ -160,5 +158,8 @@ app.get('/api/google-sheet-worksheets', async (c) => {
     return c.json({ error: err.message }, 500);
   }
 });
+
+// Serve static assets (Frontend)
+app.get('/*', serveStatic({ root: './', manifest }));
 
 export default app;

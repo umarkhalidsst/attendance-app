@@ -24,6 +24,7 @@ app.get('/', (req, res) => {
 // --- In-Memory Data (Resets on restart) ---
 let principalsData = [];
 let teachersData = [];
+let sheetsData = {};
 
 // --- Login Route ---
 app.get('/api/principals', (req, res) => {

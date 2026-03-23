@@ -39,12 +39,12 @@
 </head>
 <body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center min-h-screen p-4 font-sans text-gray-800">
     <div class="max-w-6xl w-full mx-auto bg-white/95 backdrop-blur shadow-2xl rounded-2xl p-8 transition-all border border-white/20">
-        <header class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+        <header class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 flex-wrap gap-4">
             <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-pink-600">Attendance App</h1>
             <div id="user-info" class="text-sm">
                 <span id="signed-in-user" class="font-semibold"></span>
                 <span id="signed-in-role" class="text-gray-600"></span>
-                <button id="logout" class="ml-2 text-red-600 hover:underline hidden">Logout</button>
+                <button id="logout" class="ml-4 bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 transition font-medium hidden">Logout</button>
             </div>
         </header>
         
@@ -185,7 +185,7 @@
         </div>
         
         <footer class="mt-8 text-center text-white/80 text-sm">
-            <p>&copy; 2026 Attendance App &bull; <span class="font-mono bg-white/20 px-2 py-0.5 rounded">v1.5 (Latest)</span></p>
+            <p>&copy; 2026 Attendance App &bull; <span class="font-mono bg-white/20 px-2 py-0.5 rounded">v1.6 (Latest)</span></p>
         </footer>
     </div>
     <script src="app.js"></script>

@@ -1,6 +1,6 @@
 // Cloudflare Worker URL (The backend API)
 let API_BASE_URL = "";
-console.log("App Version: 1.5 - Force Update");
+console.log("App Version: 1.6 - Logout Fix");
 
 const state = {
   sheets: {},
@@ -728,6 +728,13 @@ function render() {
 
   // Authentication flow
   const signedIn = Boolean(user);
+
+  if (signedIn) {
+    elements.logout.classList.remove("hidden");
+  } else {
+    elements.logout.classList.add("hidden");
+  }
+
   elements.authSection.classList.toggle("hidden", signedIn);
   elements.appSection.classList.toggle("hidden", !signedIn);
   if (!signedIn) {

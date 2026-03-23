@@ -686,12 +686,11 @@ function buildStudentsTable() {
     tr.appendChild(statusTd);
 
     const actionTd = document.createElement("td");
-    actionTd.className = "text-center py-3 border-b border-gray-100";
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "small";
-    btn.textContent = "Send WhatsApp";
-    btn.disabled = true;
+    btn.className = "p-2 rounded-full text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors";
+    btn.title = "Send WhatsApp";
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.05 4.94A10 10 0 0 0 12 2C6.48 2 2 6.48 2 12c0 1.6.38 3.12 1.05 4.5L2 22l5.5-1.05c1.38.67 2.9 1.05 4.5 1.05h.01c5.52 0 10-4.48 10-10 0-2.76-1.12-5.26-2.95-7.06zM12 20.01c-1.42 0-2.78-.38-3.96-1.04l-.28-.17-2.96.56.57-2.9-.19-.29c-.73-1.13-1.11-2.48-1.11-3.88 0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm4.47-6.61c-.14-.07-1.06-.52-1.22-.58-.17-.06-.29-.09-.42.09-.12.18-.46.58-.57.7-.1.12-.2.13-.37.04-.17-.09-1-0.37-1.9-1.17-.71-.63-1.18-1.41-1.3-1.65-.12-.24-.01-.37.06-.49.07-.1.15-.25.22-.34.07-.09.1-.15.15-.25.05-.1.02-.18-.02-.26-.05-.09-1.22-2.92-1.67-3.99-.44-1.05-.88-.9-.98-.91-.1-.01-.22-.01-.34-.01s-.32.04-.49.22c-.17.18-.65.62-.65 1.51s.67 1.75.76 1.87c.09.12 1.25 1.9 3.03 2.65.43.18.76.29 1.03.37.48.15.91.13 1.25.08.38-.06 1.06-.43 1.21-.85.15-.42.15-.78.1-.85-.05-.07-.17-.12-.34-.19z"/></svg>`;
     btn.disabled = row._status !== "absent";
     btn.addEventListener("click", () => {
       const template = elements.messageTemplate.value || DEFAULT_TEMPLATE;
@@ -1026,18 +1025,19 @@ function init() {
     render();
   });
 
+  // Load data from local storage for a fast initial load
   loadTeachers();
   loadPrincipals();
   loadSession();
+  loadSheets();
 
   // Restore activeTeacher if logged in as teacher to ensure sheets load correctly
   if (state.currentUser?.role === 'teacher') {
     state.activeTeacher = state.teachers.find(t => t.name === state.currentUser.name);
   }
-
+  // Sync with the server
   loadPrincipalsFromAPI();
   loadTeachersFromAPI();
-  loadSheets();
   loadSheetsFromAPI();
   render();
 }

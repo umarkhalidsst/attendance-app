@@ -55,6 +55,22 @@ app.post('/api/teachers', (req, res) => {
     }
 });
 
+app.get('/api/sheets', (req, res) => {
+    const principalId = req.query.principalId;
+    if (!principalId) return res.json({ sheets: {} });
+    res.json({ sheets: sheetsData[principalId] || {} });
+});
+
+app.post('/api/sheets', (req, res) => {
+    const { sheets, principalId } = req.body;
+    if (sheets && principalId) {
+        sheetsData[principalId] = sheets;
+        res.json({ success: true });
+    } else {
+        res.status(400).json({ error: "Missing data" });
+    }
+});
+
 // --- Helper: Convert Workbook to JSON ---
 function workbookToJson(workbook) {
   const out = {};
